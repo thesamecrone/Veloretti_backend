@@ -1,0 +1,10 @@
+.env
+client_secret_*.json
+
+node_modules/
+
+logs/
+*.log
+
+dist/
+build/
