@@ -10,11 +10,15 @@ const { registerUser } = require('./auth');
 require('dotenv').config();
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: 'https://thesamecrone.github.io',
+    credentials: true
+}));
+
 app.use(express.json());
 
 app.use(session({
-  secret: 'any_secret_word',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true
 }));
@@ -25,7 +29,7 @@ app.use(passport.session());
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL
+    callbackURL: process.env.GOOGLE_REDIRECT_URI
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
@@ -130,7 +134,7 @@ app.post('/api/subscribe', async (req, res) => {
     }
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
     console.log(`Server is listening on http://localhost:${PORT}`);
