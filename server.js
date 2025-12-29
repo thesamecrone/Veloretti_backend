@@ -138,8 +138,13 @@ app.post('/api/subscribe', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
+
+if (!PORT) {
+  console.error('PORT is not defined');
+  process.exit(1);
+}
 
 app.listen(PORT, () => {
-    console.log(`Server is listening on http://localhost:${PORT}`);
+  console.log(`Server is listening on port ${PORT}`);
 });
