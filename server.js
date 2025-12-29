@@ -138,7 +138,7 @@ app.post('/api/subscribe', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 
 if (!PORT) {
   console.error('PORT is not defined');
