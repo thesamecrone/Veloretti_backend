@@ -83,31 +83,17 @@ app.get('/auth/google',
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
-    res.send(`Hello, ${req.user.name}! You signed up with Google.`);
+    const user = { name: req.user.name, email: req.user.email };
+
+    res.send(`
+      <script>
+        window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', user: ${JSON.stringify(user)} }, '*');
+        window.close();
+      </script>
+      <p>Authentication successful! You can close this window.</p>
+    `);
   }
 );
-
-app.post('/register', async (req, res) => {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-        return res.status(400).json({ message: 'All fields must be filled' });
-    }
-
-    try {
-        const saltRounds = 10;
-        const passwordHash = await bcrypt.hash(password, saltRounds);
-        const user = await registerUser(name, email, passwordHash);
-
-        res.status(201).json({ message: 'User is registered', user });
-    } catch (err) {
-        if (err.code === '23505') {
-            return res.status(400).json({ message: 'Email is already in use' });
-        }
-        console.error(err);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
 
 app.post('/api/subscribe', async (req, res) => {
     const { email } = req.body;
