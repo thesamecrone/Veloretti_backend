@@ -13,4 +13,3 @@ async function registerUser(name, email, passwordHash) {
 }
 
 module.exports = { registerUser };
-

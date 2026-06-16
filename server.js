@@ -11,8 +11,8 @@ require('dotenv').config();
 const app = express();
 
 app.use(cors({
-    origin: 'https://thesamecrone.github.io',
-    credentials: true
+  origin: 'https://thesamecrone.github.io',
+  credentials: true
 }));
 
 app.use(express.json());
@@ -31,10 +31,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_REDIRECT_URI
-  },
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: process.env.GOOGLE_REDIRECT_URI
+},
   async (accessToken, refreshToken, profile, done) => {
     try {
       const email = profile.emails[0].value;
@@ -73,7 +73,7 @@ passport.deserializeUser(async (id, done) => {
 
 
 app.get('/', (req, res) => {
-    res.send('It works!');
+  res.send('It works!');
 });
 
 app.get('/auth/google',
@@ -96,32 +96,51 @@ app.get('/auth/google/callback',
 );
 
 app.post('/api/subscribe', async (req, res) => {
-    const { email } = req.body;
+  const { email } = req.body;
 
-    if (!email) {
-        return res.status(400).json({ error: "Email is required" });
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+
+  try {
+    const existing = await pool.query(
+      "SELECT * FROM subscriptions WHERE email = $1",
+      [email]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: "Email already subscribed" });
     }
 
-    try {
-        const existing = await pool.query(
-            "SELECT * FROM subscriptions WHERE email = $1",
-            [email]
-        );
+    await pool.query(
+      "INSERT INTO subscriptions(email) VALUES($1)",
+      [email]
+    );
 
-        if (existing.rows.length > 0) {
-            return res.status(400).json({ error: "Email already subscribed" });
-        }
+    res.json({ message: "Subscribed successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
-        await pool.query(
-            "INSERT INTO subscriptions(email) VALUES($1)",
-            [email]
-        );
+app.post('/api/register', async (req, res) => {
+  const { name, email, password } = req.body;
 
-        res.json({ message: "Subscribed successfully" });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server error" });
+  try {
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    const newUser = await registerUser(name, email, passwordHash);
+
+    res.status(201).json({ message: "User registered successfully", user: newUser });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ message: "Email already exists" });
     }
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 const PORT = process.env.PORT || 5000;
