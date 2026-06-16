@@ -106,15 +106,17 @@ app.get('/auth/google',
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
-    const user = { name: req.user.name, email: req.user.email };
+    req.session.save(() => {
+      const user = { name: req.user.name, email: req.user.email };
 
-    res.send(`
-      <script>
-        window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', user: ${JSON.stringify(user)} }, '*');
-        window.close();
-      </script>
-      <p>Authentication successful! You can close this window.</p>
-    `);
+      res.send(`
+        <script>
+          window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', user: ${JSON.stringify(user)} }, '*');
+          window.close();
+        </script>
+        <p>Authentication successful! You can close this window.</p>
+      `);
+    });
   }
 );
 
