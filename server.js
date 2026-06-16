@@ -29,7 +29,7 @@ app.use(session({
 }));
 
 const checkUserStatus = async (req, res, next) => {
-  if (req.path === '/api/register' || req.path === '/auth/google/callback' || req.path === '/') {
+  if (req.path === '/api/register' || req.path === '/auth/google' ||  req.path === '/auth/google/callback' || req.path === '/' || req.path === '/api/subscribe') {
     return next();
   }
 
