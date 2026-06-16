@@ -175,6 +175,29 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+app.post('/api/users/block', async (req, res) => {
+  const { ids } = req.body;
+  await pool.query("UPDATE users SET status = 'blocked' WHERE id = ANY($1)", [ids]);
+  res.sendStatus(200);
+});
+
+app.post('/api/users/unblock', async (req, res) => {
+  const { ids } = req.body;
+  await pool.query("UPDATE users SET status = 'active' WHERE id = ANY($1)", [ids]);
+  res.sendStatus(200);
+});
+
+app.post('/api/users/delete', async (req, res) => {
+  const { ids } = req.body;
+  await pool.query("DELETE FROM users WHERE id = ANY($1)", [ids]);
+  res.sendStatus(200);
+});
+
+app.post('/api/users/delete-unverified', async (req, res) => {
+  await pool.query("DELETE FROM users WHERE status = 'unverified'");
+  res.sendStatus(200);
+});
+
 const PORT = process.env.PORT || 5000;
 
 if (!PORT) {
