@@ -28,23 +28,24 @@ app.use(session({
   }
 }));
 
+// important: this middleware is the only place for security checks
 const checkUserStatus = async (req, res, next) => {
   if (req.path === '/api/register' || req.path === '/auth/google' || req.path === '/auth/google/callback' || req.path === '/' || req.path === '/api/subscribe' || req.path === '/api/login') {
     return next();
   }
 
   if (!req.user) {
-    console.log("DEBUG: req.user is:", req.user);
     return res.status(401).json({ message: "Not authenticated" });
   }
 
   try {
+    // note: query status directly from database to ensure real-time check
     const result = await pool.query('SELECT status FROM users WHERE id = $1', [req.user.id]);
     const user = result.rows[0];
 
     if (!user || user.status === 'blocked') {
       req.logout(() => { });
-      return res.status(403).json({ message: "User is blocked" });
+      return res.status(401).json({ message: "User is blocked or deleted" });
     }
     next();
   } catch (err) {
@@ -65,7 +66,6 @@ passport.use(new GoogleStrategy({
     try {
       const email = profile.emails[0].value;
       const name = profile.displayName;
-
       const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
       let user = result.rows[0];
 
@@ -76,6 +76,8 @@ passport.use(new GoogleStrategy({
         );
         user = insert.rows[0];
       }
+
+      await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
       done(null, user);
     } catch (err) {
@@ -157,11 +159,14 @@ app.post('/api/register', async (req, res) => {
   try {
     const newUser = await registerUser(name, email, password);
 
-    req.login(newUser, (err) => {
+    req.login(newUser, async (err) => {
       if (err) {
         console.error("Login after register error:", err);
         return res.status(500).json({ message: "Registered, but login failed" });
       }
+      
+      await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [newUser.id]);
+
       return res.status(201).json({
         message: "User registered and logged in",
         user: { id: newUser.id, name: newUser.name, email: newUser.email }
@@ -196,12 +201,14 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    req.login(user, (err) => {
+    req.login(user, async (err) => {
       if (err) {
         console.error("Login error:", err);
         return res.status(500).json({ message: "Error establishing session" });
       }
       
+      await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
+
       return res.json({ 
         message: "Logged in successfully", 
         user: { id: user.id, name: user.name, email: user.email } 
@@ -216,7 +223,7 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, name, email, status, last_login FROM users ORDER BY last_login DESC');
+    const result = await pool.query('SELECT id, name, email, status, last_login AS "lastLogin" FROM users ORDER BY last_login DESC');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ message: "Error fetching users" });
@@ -242,7 +249,8 @@ app.post('/api/users/delete', async (req, res) => {
 });
 
 app.post('/api/users/delete-unverified', async (req, res) => {
-  await pool.query("DELETE FROM users WHERE status = 'unverified'");
+  const { ids } = req.body;
+  await pool.query("DELETE FROM users WHERE status = 'unverified' AND id = ANY($1)", [ids]);
   res.sendStatus(200);
 });
 
