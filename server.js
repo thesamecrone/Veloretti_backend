@@ -27,8 +27,32 @@ app.use(session({
   }
 }));
 
+const checkUserStatus = async (req, res, next) => {
+  if (req.path === '/api/register' || req.path === '/auth/google/callback' || req.path === '/') {
+    return next();
+  }
+
+  if (!req.user) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  try {
+    const result = await pool.query('SELECT status FROM users WHERE id = $1', [req.user.id]);
+    const user = result.rows[0];
+
+    if (!user || user.status === 'blocked') {
+      req.logout(() => { });
+      return res.status(403).json({ message: "User is blocked" });
+    }
+    next();
+  } catch (err) {
+    res.status(500).json({ message: "Database error" });
+  }
+};
+
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(checkUserStatus);
 
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
@@ -70,7 +94,6 @@ passport.deserializeUser(async (id, done) => {
     done(err, null);
   }
 });
-
 
 app.get('/', (req, res) => {
   res.send('It works!');
@@ -140,6 +163,15 @@ app.post('/api/register', async (req, res) => {
     }
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+app.get('/api/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, name, email, status, last_login FROM users ORDER BY last_login DESC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching users" });
   }
 });
 
