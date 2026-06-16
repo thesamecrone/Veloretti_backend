@@ -157,10 +157,15 @@ app.post('/api/register', async (req, res) => {
   try {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
-
     const newUser = await registerUser(name, email, passwordHash);
 
-    res.status(201).json({ message: "User registered successfully", user: newUser });
+    req.login(newUser, (err) => {
+      if (err) {
+        console.error("Login after register error:", err);
+        return res.status(500).json({ message: "Registered, but login failed" });
+      }
+      return res.status(201).json({ message: "User registered and logged in", user: newUser });
+    });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ message: "Email already exists" });
