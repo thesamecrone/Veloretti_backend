@@ -19,7 +19,6 @@ app.use(cors({
 app.use(express.json());
 
 app.use(session({
-  name: 'my-app-session',
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -35,6 +34,7 @@ const checkUserStatus = async (req, res, next) => {
   }
 
   if (!req.user) {
+    console.log("DEBUG: req.user is:", req.user);
     return res.status(401).json({ message: "Not authenticated" });
   }
 
