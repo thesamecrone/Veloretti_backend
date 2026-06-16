@@ -29,7 +29,7 @@ app.use(session({
 }));
 
 const checkUserStatus = async (req, res, next) => {
-  if (req.path === '/api/register' || req.path === '/auth/google' ||  req.path === '/auth/google/callback' || req.path === '/' || req.path === '/api/subscribe' || req.path === '/api/login') {
+  if (req.path === '/api/register' || req.path === '/auth/google' || req.path === '/auth/google/callback' || req.path === '/' || req.path === '/api/subscribe' || req.path === '/api/login') {
     return next();
   }
 
@@ -155,16 +155,17 @@ app.post('/api/register', async (req, res) => {
   const { name, email, password } = req.body;
 
   try {
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
-    const newUser = await registerUser(name, email, passwordHash);
+    const newUser = await registerUser(name, email, password);
 
     req.login(newUser, (err) => {
       if (err) {
         console.error("Login after register error:", err);
         return res.status(500).json({ message: "Registered, but login failed" });
       }
-      return res.status(201).json({ message: "User registered and logged in", user: newUser });
+      return res.status(201).json({
+        message: "User registered and logged in",
+        user: { id: newUser.id, name: newUser.name, email: newUser.email }
+      });
     });
   } catch (err) {
     if (err.code === '23505') {
@@ -186,11 +187,11 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    if (!user.password) {
+    if (!user.password_hash) {
       return res.status(400).json({ message: "This account is registered via Google. Please log in with Google." });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
