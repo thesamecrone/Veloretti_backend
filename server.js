@@ -29,7 +29,7 @@ app.use(session({
 }));
 
 const checkUserStatus = async (req, res, next) => {
-  if (req.path === '/api/register' || req.path === '/auth/google' ||  req.path === '/auth/google/callback' || req.path === '/' || req.path === '/api/subscribe') {
+  if (req.path === '/api/register' || req.path === '/auth/google' ||  req.path === '/auth/google/callback' || req.path === '/' || req.path === '/api/subscribe' || req.path === '/api/login') {
     return next();
   }
 
@@ -170,6 +170,44 @@ app.post('/api/register', async (req, res) => {
     if (err.code === '23505') {
       return res.status(409).json({ message: "Email already exists" });
     }
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({ message: "This account is registered via Google. Please log in with Google." });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    req.login(user, (err) => {
+      if (err) {
+        console.error("Login error:", err);
+        return res.status(500).json({ message: "Error establishing session" });
+      }
+      
+      return res.json({ 
+        message: "Logged in successfully", 
+        user: { id: user.id, name: user.name, email: user.email } 
+      });
+    });
+
+  } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
