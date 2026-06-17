@@ -156,6 +156,8 @@ app.post('/api/subscribe', async (req, res) => {
 
 app.post('/api/register', async (req, res) => {
   const { name, email, password } = req.body;
+  res.setHeader('Access-Control-Allow-Origin', 'https://thesamecrone.github.io');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   try {
     const newUser = await registerUser(name, email, password);
