@@ -202,6 +202,11 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    // Hey Huston, I'm blocked
+    if (user.status === 'blocked') {
+      return res.status(403).json({ message: "User is blocked" });
+    }
+
     req.login(user, async (err) => {
       if (err) {
         console.error("Login error:", err);
