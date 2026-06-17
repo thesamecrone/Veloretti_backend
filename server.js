@@ -6,6 +6,7 @@ const pool = require('./db');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const { registerUser } = require('./auth');
+const path = require('path');
 
 require('dotenv').config();
 const app = express();
@@ -260,6 +261,10 @@ if (!PORT) {
   console.error('PORT is not defined');
   process.exit(1);
 }
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'bike.html'));
+});
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is listening on port ${PORT}`);
