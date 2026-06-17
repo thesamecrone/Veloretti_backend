@@ -262,7 +262,7 @@ if (!PORT) {
   process.exit(1);
 }
 
-app.get('/*', (req, res) => {
+app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'bike.html'));
 });
 
