@@ -165,7 +165,7 @@ app.post('/api/register', async (req, res) => {
         console.error("Login after register error:", err);
         return res.status(500).json({ message: "Registered, but login failed" });
       }
-      
+
       await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [newUser.id]);
 
       return res.status(201).json({
@@ -188,6 +188,9 @@ app.post('/api/login', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
+
+    res.setHeader('Access-Control-Allow-Origin', 'https://thesamecrone.github.io');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
 
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -212,12 +215,12 @@ app.post('/api/login', async (req, res) => {
         console.error("Login error:", err);
         return res.status(500).json({ message: "Error establishing session" });
       }
-      
+
       await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
-      return res.json({ 
-        message: "Logged in successfully", 
-        user: { id: user.id, name: user.name, email: user.email } 
+      return res.json({
+        message: "Logged in successfully",
+        user: { id: user.id, name: user.name, email: user.email }
       });
     });
 
@@ -268,7 +271,7 @@ if (!PORT) {
 }
 
 app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'bike.html'));
+  res.sendFile(path.join(__dirname, 'public', 'bike.html'));
 });
 
 app.listen(PORT, "0.0.0.0", () => {
